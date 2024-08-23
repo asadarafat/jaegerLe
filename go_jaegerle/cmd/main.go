@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/ssh"
 )
@@ -37,35 +39,52 @@ type Config struct {
 	Pods []PodConfig `mapstructure:"pods"`
 }
 
+var (
+	configFilePath string
+)
+
 func main() {
-	// Specify the path to the configuration file
-	configFilePath := "/var/asad/topoViewer/config/antareja-config.yaml"
-
-	// Load configuration
-	config, err := loadConfig(configFilePath)
-	if err != nil {
-		log.Fatalf("Error loading config file: %s", err)
-	}
-
-	client := &http.Client{}
-
-	for _, pod := range config.Pods {
-		go func(pod PodConfig) {
-			if pod.PodNameWildCard {
-				// If the pod name is a wildcard, resolve it first
-				// resolvedPodName, err := resolvePodName(pod.Namespace, pod.PodName)
-				if err != nil {
-					log.Errorf("Failed to resolve pod name: %v", err)
-					return
-				}
-				// pod.PodName = resolvedPodName
+	// Initialize Cobra
+	rootCmd := &cobra.Command{
+		Use:   "antareja",
+		Short: "Antareja is a CLI tool for streaming logs to Loki",
+		Run: func(cmd *cobra.Command, args []string) {
+			// Load configuration
+			config, err := loadConfig(configFilePath)
+			if err != nil {
+				log.Fatalf("Error loading config file: %s", err)
 			}
-			streamLogs(pod.Namespace, pod.PodName, pod.ContainerName, pod.LogFilePath, config.SSH.RemoteHost, config.SSH.RemotePort, config.SSH.RemoteUser, config.SSH.RemotePassword, config.Loki.URL, pod.PodNameWildCard, client)
-		}(pod)
+
+			client := &http.Client{}
+
+			for _, pod := range config.Pods {
+				go func(pod PodConfig) {
+					if pod.PodNameWildCard {
+						// If the pod name is a wildcard, resolve it first
+						// resolvedPodName, err := resolvePodName(pod.Namespace, pod.PodName)
+						if err != nil {
+							log.Errorf("Failed to resolve pod name: %v", err)
+							return
+						}
+						// pod.PodName = resolvedPodName
+					}
+					streamLogs(pod.Namespace, pod.PodName, pod.ContainerName, pod.LogFilePath, config.SSH.RemoteHost, config.SSH.RemotePort, config.SSH.RemoteUser, config.SSH.RemotePassword, config.Loki.URL, pod.PodNameWildCard, client)
+				}(pod)
+			}
+
+			// Prevent the main function from exiting
+			select {}
+		},
 	}
 
-	// Prevent the main function from exiting
-	select {}
+	// Add the --config flag
+	rootCmd.PersistentFlags().StringVar(&configFilePath, "config", "", "Path to the config file (required)")
+	rootCmd.MarkPersistentFlagRequired("config")
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
 
 // loadConfig reads the YAML configuration file from the specified path
@@ -201,6 +220,7 @@ func sendToLoki(client *http.Client, logLine, podName, containerName, lokiURL st
 		// Default timestamp format (e.g., 2024.08.21 14:21:18)
 		timestampRegex := regexp.MustCompile(`\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}:\d{2}`)
 		timestampStr = timestampRegex.FindString(logLine)
+
 		if timestampStr == "" {
 			log.Warnf("Could not extract timestamp from log line: %s", logLine)
 			return nil
@@ -225,7 +245,7 @@ func sendToLoki(client *http.Client, logLine, podName, containerName, lokiURL st
 		"streams": []map[string]interface{}{
 			{
 				"stream": map[string]string{
-					"job":       "antareja",
+					"job":       "jaegerLe",
 					"pod":       podName,
 					"container": containerName,
 				},
