@@ -48,9 +48,14 @@ jobs:
         rm -rf dist/*
         mkdir -p dist
 
+    # - name: Build Linux Binary
+    #   run: |
+    #     GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o jaegerLe go_jaegerle/cmd
+
     - name: Build Linux Binary
       run: |
-        GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o jaegerLe go_jaegerle/cmd
+        GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o jaegerLe ./go_jaegerle/cmd
+
 
     - name: Verify Build
       run: if [ ! -f jaegerLe ]; then echo "Build failed" && exit 1; fi
