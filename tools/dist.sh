@@ -16,7 +16,7 @@ rm -rRf dist/*
 
 
 echo "Build Linux Binary..."
-GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o jaegerLe go_cloudshellwrapper/cmd/main.go 
+GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o jaegerLe go_jaegerle/cmd/main.go 
 
 echo "Copy jaegerLe Binary..."
 mv jaegerLe dist/jaegerLe
