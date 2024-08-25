@@ -22,7 +22,7 @@ RUN echo 'root:admin' | chpasswd && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /opt/jaegerLe && \
-    cp -r ./dist/jaegerLe /opt/jaegerLe/
+    cp -r dist/jaegerLe /opt/jaegerLe/
 
 # Expose necessary ports
 EXPOSE 8080 22
