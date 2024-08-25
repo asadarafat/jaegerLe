@@ -2,11 +2,6 @@ name: Build, Deploy, and Docker Image CI
 
 on: 
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Version Tag'
-        required: true
-        default: 'v1.0.0'
 
 env:
   REGISTRY: ghcr.io
@@ -20,13 +15,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.22'
+    - name: Fetch all tags
+      run: git fetch --tags
+
+    - name: Extract the latest tag
+      id: extract_tag
+      run: |
+        TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+        echo "TAG=${TAG}" >> $GITHUB_ENV
 
     - name: Display Tag Name
-      run: echo "Tag=${{ github.event.inputs.tag }}"
+      run: echo "Tag=${{ env.TAG }}"
 
     - name: Change ownership of files (if necessary)
       run: sudo chown -R $USER:$USER *
@@ -39,7 +38,7 @@ jobs:
 
     - name: Update version in constants.go
       run: |
-        sed -i "s/\(var VersionInfo string = \)\"[^\"]*\"/\1\"${{ github.event.inputs.tag }}\"/" go_jaegerle/constants.go
+        sed -i "s/\(var VersionInfo string = \)\"[^\"]*\"/\1\"${{ env.TAG }}\"/" go_jaegerle/constants.go
 
     - name: Clean up dist folder
       run: |
@@ -82,23 +81,14 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata (tags, labels) for Docker
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=workflow_dispatch
-          type=semver,pattern={{version}}
-        labels: |
-          org.opencontainers.image.created=${{ steps.meta.outputs.created }}
-          org.opencontainers.image.version=${{ github.event.inputs.tag }}
-          org.opencontainers.image.revision=${{ github.sha }}
-
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
         context: .
         push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+        labels: |
+          org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+          org.opencontainers.image.version=${{ env.TAG }}
+          org.opencontainers.image.revision=${{ github.sha }}
