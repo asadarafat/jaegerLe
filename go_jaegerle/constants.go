@@ -1,3 +1,3 @@
 package jagerLe
 
-var VersionInfo string = "v0.0.8"
+var VersionInfo string = "v0.0.9"

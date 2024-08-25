@@ -16,7 +16,7 @@ RUN echo 'root:admin' | chpasswd && \
     rm -rf /var/cache/yum && \
     mkdir -p /opt/jaegerLe && \
     # Copy the pre-built binary and config files into the container
-    cp -r /absolute/path/to/dist/jaegerLe /absolute/path/to/dist/config /opt/jaegerLe/
+    cp -r ./dist/jaegerLe /opt/jaegerLe/
 
 # Set the working directory inside the container
 WORKDIR /opt/jaegerLe
