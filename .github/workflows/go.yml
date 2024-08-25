@@ -1,7 +1,12 @@
 name: Build and Deploy
 
-on: [workflow_dispatch]
-
+on: 
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version Tag'
+        required: true
+        default: 'v1.0.0'
 
 jobs:
   build:
@@ -14,20 +19,10 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22' # Set to your Go version
+        go-version: '1.22'
 
-    - name: Set up Git
-      run: |
-        git config --global user.name "Your Name"
-        git config --global user.email "your.email@example.com"
-
-    - name: Prompt for Tag Name
-      id: tag_input
-      run: echo "::set-output name=tag::v${{ github.run_number }}"
-
-    - name: Set Tag Name
-      run: echo "::set-output name=tag::v${{ github.run_number }}"
-
+    - name: Display Tag Name
+      run: echo "Tag=${{ github.event.inputs.tag }}"
 
     - name: Change ownership of files (if necessary)
       run: sudo chown -R $USER:$USER *
@@ -40,22 +35,16 @@ jobs:
 
     - name: Update version in constants.go
       run: |
-        tag="${{ steps.tag_input.outputs.tag }}"
-        sed -i "s/\(var VersionInfo string = \)\"[^\"]*\"/\1\"$tag\"/" go_jaegerle/constants.go
+        sed -i "s/\(var VersionInfo string = \)\"[^\"]*\"/\1\"${{ github.event.inputs.tag }}\"/" go_jaegerle/constants.go
 
     - name: Clean up dist folder
       run: |
         rm -rf dist/*
         mkdir -p dist
 
-    # - name: Build Linux Binary
-    #   run: |
-    #     GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o jaegerLe go_jaegerle/cmd
-
     - name: Build Linux Binary
       run: |
         GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o jaegerLe ./go_jaegerle/cmd
-
 
     - name: Verify Build
       run: if [ ! -f jaegerLe ]; then echo "Build failed" && exit 1; fi
@@ -64,16 +53,6 @@ jobs:
       run: |
         mv jaegerLe dist/jaegerLe
         cp -r config dist
-
-    - name: Commit changes
-      run: |
-        git add .
-        git commit -m "commit with tag ${{ steps.tag_input.outputs.tag }}"
-
-    - name: Create and Push Tag
-      run: |
-        git tag ${{ steps.tag_input.outputs.tag }}
-        git push origin development --tags
 
     - name: Upload Distribution Build as an Artifact
       uses: actions/upload-artifact@v3
