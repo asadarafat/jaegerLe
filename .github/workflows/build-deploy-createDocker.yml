@@ -1,0 +1,104 @@
+name: Build, Deploy, and Docker Image CI
+
+on: 
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version Tag'
+        required: true
+        default: 'v1.0.0'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22'
+
+    - name: Display Tag Name
+      run: echo "Tag=${{ github.event.inputs.tag }}"
+
+    - name: Change ownership of files (if necessary)
+      run: sudo chown -R $USER:$USER *
+
+    - name: List files in go_jaegerle directory
+      run: ls -al go_jaegerle
+
+    - name: Backup constants.go
+      run: cp go_jaegerle/constants.go go_jaegerle/constants.go.bak
+
+    - name: Update version in constants.go
+      run: |
+        sed -i "s/\(var VersionInfo string = \)\"[^\"]*\"/\1\"${{ github.event.inputs.tag }}\"/" go_jaegerle/constants.go
+
+    - name: Clean up dist folder
+      run: |
+        rm -rf dist/*
+        mkdir -p dist
+
+    - name: Build Linux Binary
+      run: |
+        GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o jaegerLe ./go_jaegerle/cmd
+
+    - name: Verify Build
+      run: if [ ! -f jaegerLe ]; then echo "Build failed" && exit 1; fi
+
+    - name: Move and Copy Files to dist
+      run: |
+        mv jaegerLe dist/jaegerLe
+        cp -r config dist
+
+    - name: Upload Distribution Build as an Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: jaegerLe
+        path: dist/
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=workflow_dispatch
+          type=semver,pattern={{version}}
+        labels: |
+          org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+          org.opencontainers.image.version=${{ github.event.inputs.tag }}
+          org.opencontainers.image.revision=${{ github.sha }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
