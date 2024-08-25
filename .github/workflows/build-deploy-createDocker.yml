@@ -5,7 +5,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: asadarafat/jaegerLe
 
 jobs:
   build:
@@ -92,3 +92,29 @@ jobs:
           org.opencontainers.image.created=${{ steps.meta.outputs.created }}
           org.opencontainers.image.version=${{ env.TAG }}
           org.opencontainers.image.revision=${{ github.sha }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      with:
+        tag_name: ${{ env.TAG }}
+        release_name: Release ${{ env.TAG }}
+        body: |
+          ## Changes
+          - Description of changes for release ${{ env.TAG }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Build Artifact to Release
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: dist/jaegerLe
+        asset_name: jaegerLe
+        asset_content_type: application/octet-stream
