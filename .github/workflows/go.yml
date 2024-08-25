@@ -32,6 +32,9 @@ jobs:
     - name: Change ownership of files (if necessary)
       run: sudo chown -R $USER:$USER *
 
+    - name: List files in go_jaegerle directory
+      run: ls -al go_jaegerle
+
     - name: Backup constants.go
       run: cp go_jaegerle/constants.go go_jaegerle/constants.go.bak
 
