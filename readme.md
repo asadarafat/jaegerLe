@@ -13,7 +13,8 @@ Prerequisites
 - A running instance of Loki to receive log data.
 - Optionally, a Grafana setup configured with Loki as a data source for log visualization.
 
-
+Example Deployment
+`https://github.com/asadarafat/jaegerLe/tree/development/example/deployment`
 
 License
 This project is licensed under the MIT License.
