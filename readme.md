@@ -15,43 +15,6 @@ Prerequisites
 
 
 
-Configuration
-JaegerLe Little Jaeger uses a YAML configuration file to specify the log files to be tailed and the Loki server details. Below is an example configuration:
-
-yaml
-Copy code
-loki:
-  url: "http://localhost:3100"
-
-ssh:
-  remoteHost: "your-remote-host"
-  remotePort: "22"
-  remoteUser: "username"
-  remotePassword: "password"
-
-pods:
-  - namespace: "your-namespace"
-    podName: "your-pod-name"
-    podNameWildCard: true
-    containerName: "your-container-name"
-    logFilePath: "/path/to/your/logfile.log"
-Running the Tool
-Use the following command to run JaegerLe Little Jaeger, specifying the path to your configuration file:
-
-bash
-Copy code
-./jaegerLe --config /path/to/your/config.yaml
-Example
-To tail logs from a remote server and send them to Loki:
-
-Update the configuration file with your server and log details.
-Run the tool:
-bash
-Copy code
-./jaegerLe --config ./config.yaml
-Contributing
-Contributions are welcome! Please fork the repository and submit a pull request.
-
 License
 This project is licensed under the MIT License.
 
