@@ -11,7 +11,9 @@ import (
 	"strings"
 	"time"
 
+	tools "github.com/asadarafat/jaegerLe/go_tools"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/ssh"
@@ -44,6 +46,7 @@ var (
 )
 
 func main() {
+
 	// Initialize Cobra
 	rootCmd := &cobra.Command{
 		Use:   "antareja",
@@ -54,6 +57,10 @@ func main() {
 			if err != nil {
 				log.Fatalf("Error loading config file: %s", err)
 			}
+
+			InitLoggerMain()
+			toolLogger := tools.Logs{}
+			toolLogger.InitLogger("logs/jaegerLe.log", 4)
 
 			client := &http.Client{}
 
@@ -85,6 +92,12 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func InitLoggerMain() {
+	// init logConfig
+	toolLogger := tools.Logs{}
+	toolLogger.InitLogger("logs/jaegerLe.log", 4)
 }
 
 // loadConfig reads the YAML configuration file from the specified path
